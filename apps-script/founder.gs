@@ -53,12 +53,14 @@ const FOUNDERS_SHEET = 'Founders';
 const SOLVES_SHEET   = 'Solves';
 const VISITS_SHEET   = 'Visits';
 const PILOT_SHEET    = 'Pilot';
+const WAITLIST_SHEET = 'Waitlist';
 
 // Header rows (column order matters — read code below relies on it)
 const FOUNDERS_HEADERS = ['number', 'email', 'name', 'ref', 'created_at'];
 const SOLVES_HEADERS   = ['session_id', 'ref', 'time_to_solve_ms', 'device', 'viewport_w', 'viewport_h', 'referrer', 'created_at'];
 const VISITS_HEADERS   = ['session_id', 'ref', 'referrer', 'created_at'];
 const PILOT_HEADERS    = ['name', 'phone', 'email', 'sodaChoice', 'interest', 'market', 'functional', 'flavour', 'created_at'];
+const WAITLIST_HEADERS = ['name', 'email', 'phone', 'created_at'];
 
 
 // ═══════════════════════════════════════════════════════════
@@ -72,7 +74,8 @@ function setupSheets() {
   ensureSheet(ss, SOLVES_SHEET,   SOLVES_HEADERS);
   ensureSheet(ss, VISITS_SHEET,   VISITS_HEADERS);
   ensureSheet(ss, PILOT_SHEET,    PILOT_HEADERS);
-  Logger.log('✓ Sheets initialized: "Founders" + "Solves" + "Visits" + "Pilot" (all empty, headers only)');
+  ensureSheet(ss, WAITLIST_SHEET, WAITLIST_HEADERS);
+  Logger.log('✓ Sheets initialized: "Founders" + "Solves" + "Visits" + "Pilot" + "Waitlist" (all empty, headers only)');
 }
 
 
@@ -86,7 +89,8 @@ function doGet(e) {
     const solves   = rowCount(ss, SOLVES_SHEET);
     const visits   = rowCount(ss, VISITS_SHEET) + VISIT_BASE_OFFSET;
     const pilots   = rowCount(ss, PILOT_SHEET);
-    return json({ founders: founders, solves: solves, visits: visits, pilots: pilots, total: TOTAL_SEATS });
+    const waitlist = rowCount(ss, WAITLIST_SHEET);
+    return json({ founders: founders, solves: solves, visits: visits, pilots: pilots, waitlist: waitlist, total: TOTAL_SEATS });
   } catch (err) {
     return json({ error: 'server', message: String(err && err.message || err) });
   }
@@ -106,6 +110,7 @@ function doPost(e) {
     if (body.type === 'solve') return handleSolve(body);
     if (body.type === 'visit') return handleVisit(body);
     if (body.type === 'pilot') return handlePilot(body);
+    if (body.type === 'waitlist') return handleWaitlist(body);
     return json({ error: 'bad_type' });
   } catch (err) {
     return json({ error: 'server', message: String(err && err.message || err) });
@@ -172,6 +177,53 @@ function handleClaim(body) {
       new Date().toISOString()
     ]);
     return json({ number: next, total: TOTAL_SEATS });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+// ── POST · waitlist signup ───────────────────────────────────
+// "Notify me when we're live" popup on the home page. Stores
+// name + email + phone in the Waitlist tab. Email-deduped so a
+// repeat signup doesn't create a second row.
+function handleWaitlist(body) {
+  // Honeypot — bots fill hidden fields.
+  if (body.website) return json({ ok: true });
+
+  const name  = ((body.name  || '') + '').trim();
+  const email = ((body.email || '') + '').trim().toLowerCase();
+  const phone = ((body.phone || '') + '').trim();
+
+  if (!isValidName(name))   return json({ error: 'invalid_name' });
+  if (!isValidEmail(email)) return json({ error: 'invalid_email' });
+  if (!isValidPhone(phone)) return json({ error: 'invalid_phone' });
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10 * 1000)) {
+    return json({ error: 'busy' });
+  }
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ensureSheet(ss, WAITLIST_SHEET, WAITLIST_HEADERS);
+
+    // Email dedup — TextFinder on the email column (column 2).
+    const finder = sheet
+      .getRange(2, 2, Math.max(1, sheet.getLastRow() - 1), 1)
+      .createTextFinder(email)
+      .matchCase(false)
+      .matchEntireCell(true);
+    if (finder.findNext()) {
+      return json({ ok: true, existing: true });
+    }
+
+    sheet.appendRow([
+      name,
+      email,
+      phone,
+      new Date().toISOString()
+    ]);
+    return json({ ok: true });
   } finally {
     lock.releaseLock();
   }
@@ -367,6 +419,13 @@ function isValidEmail(e) {
 function isValidName(n) {
   if (!n || n.length < 1 || n.length > 60) return false;
   return /^[A-Za-zÀ-ÖØ-öø-ÿ' \-]+$/.test(n);
+}
+
+function isValidPhone(p) {
+  if (!p) return false;
+  const digits = p.replace(/[^\d]/g, '');
+  if (digits.length < 7 || digits.length > 15) return false;
+  return /^[\d+\-\s()]+$/.test(p);
 }
 
 function sha256Short(s) {

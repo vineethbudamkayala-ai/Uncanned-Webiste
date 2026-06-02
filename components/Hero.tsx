@@ -8,6 +8,7 @@ import { useState } from "react";
 import Modal from "./Modal";
 import FounderCounter from "./FounderCounter";
 import FAQModal from "./FAQModal";
+import WaitlistForm from "./WaitlistForm";
 import { useRouter } from "next/navigation";
 import StickerLayer from "./StickerLayer";
 
@@ -37,9 +38,7 @@ export default function Hero() {
       <Navbar
     onUn={() => setModal("un")}
     onFaq={() => setModal("faq")}
-     onAccess={() =>
-    router.push("/pilot")
-  }
+     onAccess={() => setModal("waitlist")}
   />
 
       {/* BUBBLES */}
@@ -212,6 +211,14 @@ export default function Hero() {
   title="Things you'll want to know."
 >
   <FAQModal />
+</Modal>
+
+<Modal
+  open={modal === "waitlist"}
+  onClose={() => setModal(null)}
+  title="Notify me when we're live"
+>
+  <WaitlistForm />
 </Modal>
 <StickerLayer visible={heroReveal} />
      <HeroStamp />

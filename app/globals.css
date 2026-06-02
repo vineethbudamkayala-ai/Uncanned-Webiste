@@ -1990,6 +1990,99 @@ body::before {
     monospace;
 }
 
+/* ── Waitlist popup ("Notify me when we're live") ── */
+.waitlist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.waitlist-intro {
+  margin: 0 0 6px;
+
+  color: rgba(38,66,43,.75);
+
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.waitlist-form input {
+  padding: 15px 16px;
+
+  border-radius: 12px;
+
+  border: 1px solid rgba(38,66,43,.18);
+
+  background: #FFFDF5;
+
+  color: #26422B;
+
+  font-size: 15px;
+}
+
+.waitlist-form input::placeholder {
+  color: rgba(38,66,43,.45);
+}
+
+.waitlist-error {
+  margin: 2px 0 0;
+
+  color: #BD6537;
+
+  font-size: 13px;
+}
+
+.waitlist-submit {
+  margin-top: 6px;
+
+  padding: 16px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #26422B;
+  color: #FFEDBB;
+
+  cursor: pointer;
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 15px;
+
+  transition: opacity .2s ease;
+}
+
+.waitlist-submit:hover {
+  opacity: .9;
+}
+
+.waitlist-submit:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.waitlist-done {
+  padding: 10px 0 6px;
+}
+
+.waitlist-done-title {
+  margin: 0 0 8px;
+
+  font-family: var(--display);
+  font-size: clamp(22px, 2.4vw, 32px);
+  line-height: 1;
+  letter-spacing: -.02em;
+
+  color: #26422B;
+}
+
+.waitlist-done-sub {
+  margin: 0;
+
+  color: rgba(38,66,43,.75);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
 @media (max-width: 768px) {
 
   .pilot-card {
